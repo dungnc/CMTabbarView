@@ -10,13 +10,14 @@
 
 CGFloat const CMTabbarViewDefaultHeight = 44.0f;
 CGFloat const CMTabBarViewTabOffsetInvalid = -1.0f;
-CGFloat const CMTabbarViewDefaultPadding = 10.0f;
+CGFloat const CMTabbarViewDefaultPadding = 20.0f;
 CGFloat const CMTabbarSelectionBoxDefaultTop = 6.0f;
 CGFloat const CMTabbarViewDefaultAnimateTime = .2f;
 CGFloat const CMTabbarViewDefaultHorizontalInset = 7.5f;
 NSString *  const CMTabIndicatorViewHeight = @"CMIndicatorViewHeight";
 NSString *  const CMTabIndicatorColor = @"CMIndicatorViewColor";
 NSString *  const CMTabBoxBackgroundColor = @"CMBoxbackgroundColor";
+NSString *  const CMTabBoxCornerRadius = @"CMTabBoxCornerRadius";
 
 #define CMHEXCOLOR(c) [UIColor colorWithRed:((c>>16)&0xFF)/255.0 green:((c>>8)&0xFF)/255.0 blue:(c&0xFF)/255.0 alpha:1.0]
 
@@ -130,6 +131,7 @@ NSString *  const CMTabBoxBackgroundColor = @"CMBoxbackgroundColor";
     }
     if (!self.indicatorView.superview) {
         [self.collectionView addSubview:self.indicatorView];
+        [self.collectionView sendSubviewToBack:self.indicatorView];
     }
 }
 
@@ -188,15 +190,19 @@ NSString *  const CMTabBoxBackgroundColor = @"CMBoxbackgroundColor";
 - (UICollectionViewCell *)collectionView:(UICollectionView *)collectionView cellForItemAtIndexPath:(NSIndexPath *)indexPath
 {
     CMTabbarCollectionViewCell *cell = [collectionView dequeueReusableCellWithReuseIdentifier:NSStringFromClass([CMTabbarCollectionViewCell class]) forIndexPath:indexPath];
+    cell.backgroundColor = [UIColor clearColor];
     [self updateCellInterface:cell];
     CMTabbarItem *item = self.tabbarTitles[indexPath.row];
     cell.title = item.tabTitle;
     cell.textColor = item.isSelected ? self.selectedAttributes[NSForegroundColorAttributeName] : self.normalAttributes[NSForegroundColorAttributeName];
+    cell.textFont = item.isSelected ? self.selectedAttributes[NSFontAttributeName] : self.normalAttributes[NSFontAttributeName];
     if ((!_haveShowedDefault && indexPath.row == self.defaultSelectedIndex)) {
         self.haveShowedDefault = true;
         [self updateTabWithCurrentCell:cell nextCell:nil progress:1.0f backwards:true];
         [self updateIndicatorWithCell:cell indexPath:indexPath animate:false];
     }
+    [collectionView sendSubviewToBack:_indicatorView];
+    
     return cell;
 }
 
@@ -212,10 +218,12 @@ NSString *  const CMTabBoxBackgroundColor = @"CMBoxbackgroundColor";
 - (void)collectionView:(UICollectionView *)collectionView didSelectItemAtIndexPath:(NSIndexPath *)indexPath
 {
     self.isExecuting = true;
-    [self setTabIndex:indexPath.row animated:true];
-    [collectionView reloadData];
+    [self setSelectedWithIndex:indexPath.row];
+    //[self setTabIndex:indexPath.row animated:true];
+    
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(.35f * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
         self.isExecuting = false;
+        [collectionView reloadData];
     });
     if ([self.delegate respondsToSelector:@selector(tabbarView:didSelectedAtIndex:)]) {
         [self.delegate tabbarView:self didSelectedAtIndex:indexPath.row];
@@ -297,6 +305,7 @@ NSString *  const CMTabBoxBackgroundColor = @"CMBoxbackgroundColor";
     } else {
         [self updateTabbarForIndex:index animated:animated];
     }
+    [self.collectionView reloadData];
 }
 
 - (void)setDefaultSelectedIndex:(NSUInteger)defaultSelectedIndex
@@ -322,8 +331,7 @@ NSString *  const CMTabBoxBackgroundColor = @"CMBoxbackgroundColor";
 {
     _selectionType = selectionType;
     if (selectionType == CMTabbarSelectionBox) {
-        self.indicatorView.backgroundColor = [_indicatorAttributes[CMTabBoxBackgroundColor] colorWithAlphaComponent:0.6];
-        self.indicatorView.layer.cornerRadius = 3.0f;
+        self.indicatorView.backgroundColor = _indicatorAttributes[CMTabBoxBackgroundColor];
     } else if (selectionType == CMTabbarSelectionIndicator) {
         self.indicatorView.backgroundColor = _indicatorAttributes[CMTabIndicatorColor];
         self.indicatorView.layer.cornerRadius = 1.0f;
@@ -407,6 +415,14 @@ NSString *  const CMTabBoxBackgroundColor = @"CMBoxbackgroundColor";
         }
     } else if (_selectionType == CMTabbarSelectionBox) {
         self.indicatorView.frame = CGRectMake(originX-CMTabbarViewDefaultPadding/2, CMTabbarSelectionBoxDefaultTop, width+CMTabbarViewDefaultPadding, self.collectionView.frame.size.height-2*CMTabbarSelectionBoxDefaultTop);
+        
+        CGFloat boxCornerRadius = [(NSNumber *)_indicatorAttributes[CMTabBoxCornerRadius] floatValue];
+        if (boxCornerRadius > 0) {
+            self.indicatorView.layer.cornerRadius = boxCornerRadius;
+        } else {
+            //Default = 1/2 height;
+            self.indicatorView.layer.cornerRadius = self.indicatorView.frame.size.height/2;
+        }
     }
     CGFloat scrollViewX = MAX(0, originX+width/2 - self.collectionView.bounds.size.width / 2.0f);
     [self.collectionView scrollRectToVisible:CGRectMake(scrollViewX, self.collectionView.frame.origin.y, self.collectionView.frame.size.width - self.contentInset.left - self.contentInset.right, self.collectionView.frame.size.height) animated:false];
@@ -433,10 +449,10 @@ NSString *  const CMTabBoxBackgroundColor = @"CMBoxbackgroundColor";
     }
     if (self.selectedAttributes) {
         if ([self.selectedAttributes valueForKey:NSFontAttributeName]) {
-            cell.selectedTextFont = self.normalAttributes[NSFontAttributeName];
+            cell.selectedTextFont = self.selectedAttributes[NSFontAttributeName];
         }
         if ([self.selectedAttributes valueForKey:NSForegroundColorAttributeName]) {
-            cell.selectedTextColor = self.normalAttributes[NSForegroundColorAttributeName];
+            cell.selectedTextColor = self.selectedAttributes[NSForegroundColorAttributeName];
         }
     }
 }

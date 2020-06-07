@@ -32,6 +32,8 @@ extern NSString *const CMTabIndicatorColor;
 
 extern NSString *const CMTabBoxBackgroundColor;
 
+extern NSString *const CMTabBoxCornerRadius;
+
 @protocol CMTabbarViewDatasouce <NSObject>
 
 - (NSArray<NSString *> *)tabbarTitlesForTabbarView:(CMTabbarView *)tabbarView;
@@ -67,7 +69,7 @@ extern NSString *const CMTabBoxBackgroundColor;
  */
 @property (assign, nonatomic) CMTabbarIndicatorScrollType indicatorScrollType;
 /**
- The attributes for the tab indicator(CMTabIndicatorViewHeight,CMTabIndicatorColor,CMTabBoxBackgroundColor)
+ The attributes for the tab indicator(CMTabIndicatorViewHeight,CMTabIndicatorColor,CMTabBoxBackgroundColor,CMTabBoxCornerRadius)
  */
 @property (strong, nonatomic) NSDictionary *indicatorAttributes;
 /**
@@ -100,6 +102,7 @@ extern NSString *const CMTabBoxBackgroundColor;
 @property (assign, nonatomic) CGFloat tabbarOffsetX;
 
 @property (assign, nonatomic) BOOL needAutoCenter;
+
 /**
  Set the current selected tab
  
